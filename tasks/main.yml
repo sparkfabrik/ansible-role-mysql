@@ -1,0 +1,40 @@
+---
+# tasks file for sparkfabrik.mysql
+- name: Install
+  apt: pkg={{ item }} state=installed
+  with_items:
+    - mysql-server
+    - mysql-client
+    - python-mysqldb
+  notify: restart mysql
+
+- name: Configuration file my.cnf
+  template: src=etc--mysql--my.cnf.j2 dest=/etc/mysql/my.cnf
+  notify: restart mysql
+
+- name: Set the root password.
+  mysql_user: name=root password="{{ mysql_root_password }}" host="localhost"
+
+- name: Configuration file, .my.cnf
+  template: src=root--my.cnf.j2 dest=/root/.my.cnf
+
+- name: Delete anonymous MySQL server user for {{ inventory_hostname }}
+  mysql_user: user="" host="{{ inventory_hostname }}" state="absent" login_user="root" login_password="{{ mysql_root_password }}"
+
+- name: Delete anonymous MySQL server user for localhost
+  action: mysql_user user="" state="absent"
+
+- name: Secure the MySQL root user for IPV6 localhost (::1)
+  action: mysql_user user="root" password="{{ mysql_root_password }}" host="::1" login_user="root" login_password="{{ mysql_root_password }}"
+
+- name: Secure the MySQL root user for IPV4 localhost (127.0.0.1)
+  action: mysql_user user="root" password="{{ mysql_root_password }}" host="127.0.0.1" login_user="root" login_password="{{ mysql_root_password }}"
+
+- name: Secure the MySQL root user for localhost domain (localhost)
+  action: mysql_user user="root" password="{{ mysql_root_password }}" host="localhost" login_user="root" login_password="{{ mysql_root_password }}"
+
+- name: Secure the MySQL root user for {{ inventory_hostname }} domain
+  action: mysql_user user="root" password="{{ mysql_root_password }}" host="{{ inventory_hostname }}" login_user="root" login_password="{{ mysql_root_password }}"
+
+- name: Remove the MySQL test database
+  action: mysql_db db=test state=absent login_user="root" login_password="{{ mysql_root_password }}"
